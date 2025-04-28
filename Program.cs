@@ -1,7 +1,11 @@
 ﻿// Email Adresse: matteo@labforweb.accademy
 
-/** Docs: https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types *//** https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types */
+
 /* SysScol: Definisco il Range di voti di questo sistema scolastico fittizzio*/
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
+/** Docs: https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types *//** https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types */
 enum SysScol :byte { // Enum regola stilistica Pascal Case
     MinVoto = 0,
     Sufficiente = 6,
@@ -35,7 +39,36 @@ class StatisticheStudente {
     private byte votiSopraMedia = 0;
     private byte votiSottoMedia = 0;
     private byte votiInsufficienti = 0;
-    private EsitoAnno risultato = EsitoAnno.NonDefinito;
+    private EsitoAnno risultato = EsitoAnno.NonDefinito;    
+    private int numeroVoti = 0;
+    private class OggettoGrafico {
+        public int[] origineAssi = new int[]{0, 0}; // Origine assi del Grafico
+        public int[] coordinateStringaVoti = new int[0]; // Numero di voti presenti nella lista
+        public int[] coordinateScalaVoti = new int[0]; // SysScol in questo esercizio vanno da 0 a 10
+        private int fattoreMoltiplicativo = 4;  // Fattore moltiplicativo asse voti
+        public OggettoGrafico() { // Costruttore
+            coordinateStringaVoti = new int[0];
+            coordinateScalaVoti = new int[0];
+        }
+        public void InizializzaOrigineAssi(int x, int y){
+            origineAssi[0] = x;
+            origineAssi[1] = y;
+        } /*InizializzaOrigineAssi*/
+        private void DichiaraCoordinateLabels(int numeroVoti, SysScol scala){ // Metodo che inizializza
+            coordinateStringaVoti = new int[numeroVoti]; 
+            coordinateScalaVoti = new int [(int)scala+1];
+        } /*DichiaraCoordinateLabels*/
+        public void InizializzaCoordinateLabels(int numeroVoti, SysScol scala){
+            DichiaraCoordinateLabels(numeroVoti, scala);
+            for(int i=0; i<((int)scala+1); i++){
+                coordinateScalaVoti[i]= origineAssi[0] + (i * fattoreMoltiplicativo);
+            }
+            for(int i=0; i<numeroVoti; i++){
+                coordinateStringaVoti[i]= origineAssi[1]+2 + (i*3);
+            }
+        }/*InizializzaCoordinateLabels*/
+    }
+
 
     [Flags]
     enum StatoStatistiche :byte {
@@ -196,6 +229,29 @@ class StatisticheStudente {
             CalcolaRisultato();
         }
     } /*CalcolaStatistiche*/
+
+    public void TracciaAssi(){
+        // origineAssi[0] = Console.CursorLeft;
+        // origineAssi[1] = Console.CursorTop;
+        numeroVoti = listaVoti.Count;
+        // Console.WriteLine(string.Join(", ", origineAssi));
+        int numeroSpazi = ("voto ".Length + Convert.ToString(numeroVoti).Length);
+        OggettoGrafico oggettoGrafico = new OggettoGrafico();
+        oggettoGrafico.InizializzaOrigineAssi(numeroSpazi, Console.CursorTop+1);
+        oggettoGrafico.InizializzaCoordinateLabels(/*numeroVoti*/5, SysScol.MaxVoto);
+        Console.CursorVisible = false;
+        for(int i=0; i<oggettoGrafico.coordinateScalaVoti.Length; i++){
+            Console.SetCursorPosition(oggettoGrafico.coordinateScalaVoti[i], oggettoGrafico.origineAssi[1]-1);
+            Console.Write(i);
+        }
+        for(int i=0; i<oggettoGrafico.coordinateStringaVoti.Length; i++){
+            Console.WriteLine(oggettoGrafico.coordinateStringaVoti[i]);
+            Console.SetCursorPosition(1, (int)oggettoGrafico.coordinateStringaVoti[i]);
+            Console.WriteLine($"voto {i+1}");
+            //Console.WriteLine("Sono qui dentro");
+        }
+
+    } /*Traccia Assi*/
 };
 
 
@@ -245,6 +301,7 @@ class Program {
     
     static void Main(string[] args){
         StatisticheStudente studente = new StatisticheStudente();
+        studente.TracciaAssi();
         byte numeroVoti=0;
         ErrorCode controlloInput = ErrorCode.DefaultError;
         Console.WriteLine("\n");
