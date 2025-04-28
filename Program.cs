@@ -40,34 +40,125 @@ class StatisticheStudente {
     private byte votiSottoMedia = 0;
     private byte votiInsufficienti = 0;
     private EsitoAnno risultato = EsitoAnno.NonDefinito;    
-    private int numeroVoti = 0;
+    //private int numeroVoti = 0;
     private class OggettoGrafico {
-        public int[] origineAssi = new int[]{0, 0}; // Origine assi del Grafico
-        public int[] coordinateStringaVoti = new int[0]; // Numero di voti presenti nella lista
-        public int[] coordinateScalaVoti = new int[0]; // SysScol in questo esercizio vanno da 0 a 10
-        private int fattoreMoltiplicativo = 4;  // Fattore moltiplicativo asse voti
-        public OggettoGrafico() { // Costruttore
-            coordinateStringaVoti = new int[0];
-            coordinateScalaVoti = new int[0];
+        private int[] origineAssi = new int[]{0, 0}; // Origine assi del Grafico
+        private int[] coordinateStringaVoti = new int[0]; // Numero di voti presenti nella lista
+        private int[] coordinateScalaVoti = new int[0]; // SysScol in questo esercizio vanno da 0 a 10
+        private byte scalingFactor = 0;  // Fattore moltiplicativo asse voti
+        private StatisticheStudente statEsterna;
+        private List<byte> listaNote = new List<byte>();
+        private int numeroVoti = 0;
+        private int Xdisplacement = 0;
+        private byte larghezzaBarraIstogramma = 0;
+        private int lunghezzaAsseY = 0;
+        private int lunghezzaAsseX = 0;
+        private static class GraficaStatistica {
+            /*Simboli*/
+            public const char Solido =      '\u2588'; // VotoMassimo
+            public const char Sfumato =     '\u2591'; // VotoSopraMedia
+            public const char Sgranato =    '\u2592'; // VotoSottoMedia
+            public const char Effimero =    '\u2593'; // VotoInsufficiente
+            public const char Vuoto  =      '\u258F'; // VotoMinimo
+            /*Colori*/
+            public const ConsoleColor MediaVoti = ConsoleColor.Cyan;
+            public const ConsoleColor VotoMassimo = ConsoleColor.Green;
+            public const ConsoleColor VotoMinimo = ConsoleColor.DarkRed;
+            public const ConsoleColor VotiSopraMedia = ConsoleColor.DarkGreen;
+            public const ConsoleColor VotiSottoMedia = ConsoleColor.Red;
+            public const ConsoleColor VotiInsufficienti = ConsoleColor.DarkYellow;
+            public const ConsoleColor EsitoPromosso = ConsoleColor.Blue;
+            public const ConsoleColor EsitoBocciato = ConsoleColor.Red;
         }
-        public void InizializzaOrigineAssi(int x, int y){
+        public OggettoGrafico(int x, int y, StatisticheStudente statistiche, byte fattoreMoltiplicativo, byte widthBars) {
+            this.statEsterna = statistiche;
+            this.listaNote= this.statEsterna.listaVoti;
+            this.numeroVoti = this.listaNote.Count;
+            this.Xdisplacement = ((int)"voto ".Length + (int)Convert.ToString(this.numeroVoti).Length + (int)"  ".Length);
+            this.scalingFactor = fattoreMoltiplicativo;
+            this.larghezzaBarraIstogramma = widthBars;
+            this.lunghezzaAsseY = ((SysScol.MaxVoto -SysScol.MinVoto)+1)*(this.scalingFactor);
+            this.lunghezzaAsseX = (this.larghezzaBarraIstogramma +1)*(this.numeroVoti);
+            InizializzaOrigineAssi(this.Xdisplacement, y+1);
+            InizializzaCoordinateLabels(this.numeroVoti);
+        } /*Costruttore OggettoGrafico*/
+        private void InizializzaOrigineAssi(int x, int y){
             origineAssi[0] = x;
             origineAssi[1] = y;
-        } /*InizializzaOrigineAssi*/
-        private void DichiaraCoordinateLabels(int numeroVoti, SysScol scala){ // Metodo che inizializza
-            coordinateStringaVoti = new int[numeroVoti]; 
-            coordinateScalaVoti = new int [(int)scala+1];
-        } /*DichiaraCoordinateLabels*/
-        public void InizializzaCoordinateLabels(int numeroVoti, SysScol scala){
-            DichiaraCoordinateLabels(numeroVoti, scala);
-            for(int i=0; i<((int)scala+1); i++){
-                coordinateScalaVoti[i]= origineAssi[0] + (i * fattoreMoltiplicativo);
+        } /*InizializzaOrigineAssi*/        
+        private void InizializzaCoordinateLabels(int numeroVoti){
+            int scala = (int)(SysScol.MaxVoto+1);
+            this.coordinateStringaVoti = new int[numeroVoti]; 
+            this.coordinateScalaVoti = new int [scala];
+            for(int i=0; i<scala; i++){
+                this.coordinateScalaVoti[i]= this.origineAssi[0] + (i * this.scalingFactor);
             }
             for(int i=0; i<numeroVoti; i++){
-                coordinateStringaVoti[i]= origineAssi[1]+2 + (i*3);
+                this.coordinateStringaVoti[i]= this.origineAssi[1]+2 + (i*this.larghezzaBarraIstogramma);
             }
         }/*InizializzaCoordinateLabels*/
-    }
+        
+        public void TracciaAssi(){
+            Console.CursorVisible = false;
+            Console.SetBufferSize(Console.WindowWidth, this.lunghezzaAsseY+ 10); // Aumenta il Buffer Console
+
+            /*Label asse Y*/
+            for(int i=0; i<coordinateScalaVoti.Length; i++){
+                Console.SetCursorPosition(this.coordinateScalaVoti[i], this.origineAssi[1]-1);
+                Console.Write(i);
+                Thread.Sleep(5);
+            }
+            /*Asse Y*/
+            for(int i=0; i<this.lunghezzaAsseY; i++){
+                Console.SetCursorPosition(this.origineAssi[0]+i, this.origineAssi[1]);
+                Console.Write("-");
+                if(i==this.lunghezzaAsseY-1) {Console.WriteLine(">");}                
+                Thread.Sleep(5);
+            }
+            
+            int valoreIntero = (int)Math.Floor(statEsterna.mediaVoti);
+            int parteConLaVirgola = (int)Math.Truncate((statEsterna.mediaVoti - valoreIntero)*100);
+            int proporzioneAggiunta = (int)Math.Round((double)((this.scalingFactor*parteConLaVirgola)/100));
+            int valoreScalato = (int)((valoreIntero * this.scalingFactor)+proporzioneAggiunta+this.Xdisplacement);
+            int lunghezzaMedia = (int)(this.lunghezzaAsseX - Math.Ceiling((double)this.scalingFactor/2));
+            /*Media*/            
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            for(int i=0; i<lunghezzaMedia; i++){
+                Console.SetCursorPosition((int)valoreScalato, this.origineAssi[1]+1+i);
+                Console.WriteLine("|");
+            }            
+            Console.ResetColor();
+
+            /*Label asse X - Asse X - Istogramma*/
+            for(int i=0; i<this.lunghezzaAsseX; i++){
+                for(int j=0; j<this.coordinateStringaVoti.Length; j++){
+                    Thread.Sleep(5);
+                    /*Label asse X*/
+                    if(this.coordinateStringaVoti[j]==this.origineAssi[1]+i){
+                        Console.SetCursorPosition(1, (int)this.coordinateStringaVoti[j]);
+                        Console.WriteLine($"voto {j+1}");
+                        int barraIstogramma = this.listaNote[j] * this.scalingFactor;
+                        /*Istogramma*/
+                        for(int k=0; k<barraIstogramma; k++){
+                            Thread.Sleep(5);
+                            Console.SetCursorPosition(this.Xdisplacement+k+1, (int)this.coordinateStringaVoti[j]);
+                            Console.Write((char)GraficaStatistica.Solido);
+                        } // for k
+                    } // if                    
+                } // for j
+                /*Asse X*/
+                Console.SetCursorPosition(this.Xdisplacement, this.origineAssi[1]+i);
+                Console.WriteLine("|");
+                if(i==this.lunghezzaAsseX-1){
+                    Console.SetCursorPosition(this.Xdisplacement, this.origineAssi[1]+i);
+                    Console.WriteLine("v");
+                    }
+                Thread.Sleep(5);
+            } // for i
+        } /*Traccia Assi*/
+        
+
+    } /*OggettoGrafico*/
 
 
     [Flags]
@@ -88,7 +179,7 @@ class StatisticheStudente {
     public void StampaVotiStudente(){        
         Console.WriteLine($"Voti inseriti: [{string.Join(", ",listaVoti)}]");
     }
-    public void MostraStatistiche(){
+    public void MostraStatistiche(StatisticheStudente statistiche){
         CalcolaStatistiche();
         
         Console.WriteLine("\n");
@@ -104,6 +195,10 @@ class StatisticheStudente {
         Console.WriteLine($"Risultato: {risultato}");
         Console.WriteLine("-----------------");
         Console.WriteLine("\n");
+        Console.ReadLine();
+        Console.Clear();
+        OggettoGrafico oggettoGrafico = new OggettoGrafico(Console.CursorLeft, Console.CursorTop, statistiche, 7, 3);
+        oggettoGrafico.TracciaAssi();        
     }
 
     public ErrorCode InserisciVoto(string? input){
@@ -137,9 +232,10 @@ class StatisticheStudente {
             if((StatoCalcoliStatistici & StatoStatistiche.SommaVotiChecker)==0){
                 CalcolaSommaVoti();
             }
-            mediaVoti = sommaVoti/listaVoti.Count;
+            mediaVoti = (float)sommaVoti/listaVoti.Count;
         }
         StatoCalcoliStatistici |= StatoStatistiche.MediaVotiChecker; // Aggiorna Flag media
+        // Console.WriteLine($"Sommavoti: {sommaVoti}, Listavoticount: {listaVoti.Count}, Media: {mediaVoti}");
     } /*CalcolaMediaVoti*/
 
     private void CalcolaVotoMassimo(){
@@ -230,28 +326,7 @@ class StatisticheStudente {
         }
     } /*CalcolaStatistiche*/
 
-    public void TracciaAssi(){
-        // origineAssi[0] = Console.CursorLeft;
-        // origineAssi[1] = Console.CursorTop;
-        numeroVoti = listaVoti.Count;
-        // Console.WriteLine(string.Join(", ", origineAssi));
-        int numeroSpazi = ("voto ".Length + Convert.ToString(numeroVoti).Length);
-        OggettoGrafico oggettoGrafico = new OggettoGrafico();
-        oggettoGrafico.InizializzaOrigineAssi(numeroSpazi, Console.CursorTop+1);
-        oggettoGrafico.InizializzaCoordinateLabels(/*numeroVoti*/5, SysScol.MaxVoto);
-        Console.CursorVisible = false;
-        for(int i=0; i<oggettoGrafico.coordinateScalaVoti.Length; i++){
-            Console.SetCursorPosition(oggettoGrafico.coordinateScalaVoti[i], oggettoGrafico.origineAssi[1]-1);
-            Console.Write(i);
-        }
-        for(int i=0; i<oggettoGrafico.coordinateStringaVoti.Length; i++){
-            Console.WriteLine(oggettoGrafico.coordinateStringaVoti[i]);
-            Console.SetCursorPosition(1, (int)oggettoGrafico.coordinateStringaVoti[i]);
-            Console.WriteLine($"voto {i+1}");
-            //Console.WriteLine("Sono qui dentro");
-        }
 
-    } /*Traccia Assi*/
 };
 
 
@@ -301,7 +376,6 @@ class Program {
     
     static void Main(string[] args){
         StatisticheStudente studente = new StatisticheStudente();
-        studente.TracciaAssi();
         byte numeroVoti=0;
         ErrorCode controlloInput = ErrorCode.DefaultError;
         Console.WriteLine("\n");
@@ -326,6 +400,7 @@ class Program {
             }
         } /*while(numeroVoti>0)*/
 
-        studente.MostraStatistiche();
+        studente.MostraStatistiche(studente);
+        Console.ReadLine();
     } /*Main*/
 } /*Program*/
