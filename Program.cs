@@ -1,4 +1,4 @@
-﻿// Email Adresse: matteo@labforweb.accademy
+﻿// Email Adresse: matteo@labforweb.academy
 
 
 /* SysScol: Definisco il Range di voti di questo sistema scolastico fittizzio*/
